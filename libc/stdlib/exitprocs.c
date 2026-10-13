@@ -129,7 +129,16 @@ __call_exitprocs(int code, void *param)
 }
 
 #ifdef __INIT_FINI_ARRAY
-static const void *__call_exitprocs_ref __section(".fini_array_onexit") __used = __call_exitprocs;
+#ifdef __RL78__
+/* RL78 linker scripts collect .fini_array and .fini_array.*, sorted by
+ * name: this suffix comes after every priority number. */
+#define _ONEXIT_SECTION ".fini_array.onexit"
+#else
+#define _ONEXIT_SECTION ".fini_array_onexit"
+#endif
+/* A function pointer, as every other entry of the array: it need not have
+ * the size of a data pointer. */
+static void (* const __call_exitprocs_ref)(void) __section(_ONEXIT_SECTION) __used = __call_exitprocs;
 #endif
 
 #endif

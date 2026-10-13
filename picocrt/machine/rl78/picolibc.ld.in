@@ -43,6 +43,11 @@
  * lie in the mirrored part of the flash, and the initial contents of .data
  * are copied by far pointers.
  *
+ * The sections' addresses and sizes are published under picolibc's names
+ * (__data_start, __bss_size, ...) and under the names RL78 linker scripts
+ * have always used (__datastart, __romdatacopysize, __bsssize, ...); the
+ * start-up code uses the latter, so that it also works with such a script.
+ *
  * Symbols an application may define to describe the device:
  *
  *   __flash, __flash_size        code flash after the fixed tables
@@ -125,6 +130,9 @@ SECTIONS
 	PROVIDE(@PREFIX@__data_source_end = LOADADDR(.data) + SIZEOF(.data));
 	PROVIDE(@PREFIX@__data_source_size = SIZEOF(.data));
 	PROVIDE(@PREFIX@__edata = @PREFIX@__data_end);
+	PROVIDE(__datastart = ADDR(.data));
+	PROVIDE(__romdatastart = LOADADDR(.data));
+	PROVIDE(__romdatacopysize = SIZEOF(.data));
 	PROVIDE(@PREFIX@_edata = @PREFIX@__data_end);
 	PROVIDE(@PREFIX@edata = @PREFIX@__data_end);
 
@@ -136,6 +144,9 @@ SECTIONS
 	PROVIDE(@PREFIX@__dataf_source = LOADADDR(.dataf));
 	PROVIDE(@PREFIX@__dataf_end = ADDR(.dataf) + SIZEOF(.dataf));
 	PROVIDE(@PREFIX@__dataf_size = SIZEOF(.dataf));
+	PROVIDE(__datafstart = ADDR(.dataf));
+	PROVIDE(__romdatafstart = LOADADDR(.dataf));
+	PROVIDE(__romdatafcopysize = SIZEOF(.dataf));
 
 	.sdata : ALIGN(2) {
 		*(.sdata .sdata.*)
@@ -145,6 +156,9 @@ SECTIONS
 	PROVIDE(@PREFIX@__sdata_source = LOADADDR(.sdata));
 	PROVIDE(@PREFIX@__sdata_end = ADDR(.sdata) + SIZEOF(.sdata));
 	PROVIDE(@PREFIX@__sdata_size = SIZEOF(.sdata));
+	PROVIDE(__sdatastart = ADDR(.sdata));
+	PROVIDE(__romsdatastart = LOADADDR(.sdata));
+	PROVIDE(__romsdatacopysize = SIZEOF(.sdata));
 
 	/* Constants and tables that near pointers read: in the mirror. */
 	.rodata MAX(ALIGN(LOADADDR(.sdata) + SIZEOF(.sdata), 2), @PREFIX@__mirror_flash) : {
@@ -168,7 +182,6 @@ SECTIONS
 		PROVIDE_HIDDEN ( @PREFIX@__fini_array_start = . );
 		KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
 		KEEP (*(.fini_array .dtors))
-		KEEP (*(.fini_array*))
 		PROVIDE_HIDDEN ( @PREFIX@__fini_array_end = . );
 		. = ALIGN(2);
 	} >flash
@@ -231,6 +244,8 @@ SECTIONS
 	PROVIDE(@PREFIX@__sbss_start = ADDR(.sbss));
 	PROVIDE(@PREFIX@__sbss_end = ADDR(.sbss) + SIZEOF(.sbss));
 	PROVIDE(@PREFIX@__sbss_size = SIZEOF(.sbss));
+	PROVIDE(__sbssstart = ADDR(.sbss));
+	PROVIDE(__sbsssize = SIZEOF(.sbss));
 
 	.bss (NOLOAD) : ALIGN(2) {
 		*(.bss .bss.*)
@@ -243,6 +258,8 @@ SECTIONS
 	PROVIDE(@PREFIX@__bss_start = ADDR(.bss));
 	PROVIDE(@PREFIX@__bss_end = ADDR(.bss) + SIZEOF(.bss));
 	PROVIDE(@PREFIX@__bss_size = SIZEOF(.bss));
+	PROVIDE(__bssstart = ADDR(.bss));
+	PROVIDE(__bsssize = SIZEOF(.bss));
 
 	.bssf (NOLOAD) : ALIGN(2) {
 		*(.bssf .bssf.*)
@@ -251,14 +268,19 @@ SECTIONS
 	PROVIDE(@PREFIX@__bssf_start = ADDR(.bssf));
 	PROVIDE(@PREFIX@__bssf_end = ADDR(.bssf) + SIZEOF(.bssf));
 	PROVIDE(@PREFIX@__bssf_size = SIZEOF(.bssf));
+	PROVIDE(__bssfstart = ADDR(.bssf));
+	PROVIDE(__bssfsize = SIZEOF(.bssf));
 
 	PROVIDE(@PREFIX@__end = ADDR(.bssf) + SIZEOF(.bssf));
 	PROVIDE(@PREFIX@_end = @PREFIX@__end);
 	PROVIDE(@PREFIX@end = @PREFIX@__end);
 
 	/* The heap runs from the end of the data up to the stack's reserve. */
+	PROVIDE(@PREFIX@@STACK@_size = @DEFAULT_STACK_SIZE@);
+	PROVIDE(__stack = @PREFIX@@STACK@);
+	PROVIDE(__stack_size = @PREFIX@@STACK@_size);
 	PROVIDE(@PREFIX@__heap_start = @PREFIX@__end);
-	PROVIDE(@PREFIX@__heap_end = @PREFIX@@STACK@ - (DEFINED(@PREFIX@@STACK@_size) ? @PREFIX@@STACK@_size : @DEFAULT_STACK_SIZE@));
+	PROVIDE(@PREFIX@__heap_end = @PREFIX@@STACK@ - @PREFIX@@STACK@_size);
 	PROVIDE(@PREFIX@__heap_size = @PREFIX@__heap_end - @PREFIX@__heap_start);
 	ASSERT(@PREFIX@__heap_end >= @PREFIX@__heap_start, "Error: no room left for the stack")
 

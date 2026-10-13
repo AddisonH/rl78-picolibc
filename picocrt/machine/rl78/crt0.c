@@ -33,34 +33,57 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* .data is copied here: its image is in flash, out of reach of the near
- * pointers that the common code would use. */
+/*
+ * The linker symbols used here are the ones RL78 linker scripts have
+ * always defined (__datastart, __romdatastart, __romdatacopysize, ...), so
+ * that a script written for an earlier RL78 C library keeps working.
+ * picolibc.ld defines them next to picolibc's own names.
+ */
+
+#include <stddef.h>
+#include <stdint.h>
+
+/* An address in data as a near pointer sees it. */
+#define RL78_NEAR(name) extern char rl78_##name[] __asm__("__" #name)
+/* The same for a far pointer: the image of initialized data is in flash. */
+#define RL78_FAR(name)  extern char __far rl78_far_##name[] __asm__("__" #name)
+/*
+ * A size. It may be zero, and the compiler takes the address of an object
+ * to be non-null unless the symbol is weak; weak also lets a script leave
+ * out the sections it has no use for.
+ */
+#define RL78_SIZE(name) extern char rl78_##name[] __asm__("__" #name) __weak
+
+RL78_NEAR(datastart);
+RL78_FAR(romdatastart);
+RL78_SIZE(romdatacopysize);
+RL78_NEAR(sdatastart);
+RL78_FAR(romsdatastart);
+RL78_SIZE(romsdatacopysize);
+RL78_FAR(datafstart);
+RL78_FAR(romdatafstart);
+RL78_SIZE(romdatafcopysize);
+RL78_NEAR(sbssstart);
+RL78_SIZE(sbsssize);
+RL78_NEAR(bssstart);
+RL78_SIZE(bsssize);
+RL78_FAR(bssfstart);
+RL78_SIZE(bssfsize);
+
+#define rl78_size(name) ((size_t)(uintptr_t)rl78_##name)
+
+/* The common code clears .bss and nothing else: .data is copied here, and
+ * the init array is run here with the names above. */
 #define CRT0_DATA_INIT
+#define CONSTRUCTORS        0
+#define POST_MEMORY_SETUP() rl78_init_array()
+#define __bss_start         rl78_bssstart
+#define __bss_size          rl78_bsssize
+
+static void rl78_init_array(void);
 
 #include "../../crt0.h"
-
-extern char             __stack[];
-
-/* The same symbols as a far pointer sees them. */
-extern const char __far rl78_data_source[] __asm__("___data_source");
-extern const char __far rl78_sdata_source[] __asm__("___sdata_source");
-extern const char __far rl78_dataf_source[] __asm__("___dataf_source");
-extern char __far       rl78_dataf_start[] __asm__("___dataf_start");
-extern char __far       rl78_bssf_start[] __asm__("___bssf_start");
-extern char             __sdata_start[];
-extern char             __sdata_end[];
-extern char             __dataf_start[];
-extern char             __dataf_end[];
-extern char             __sbss_start[];
-extern char             __sbss_end[];
-extern char             __bssf_start[];
-extern char             __bssf_end[];
-
-/*
- * Sizes are differences of two addresses: a size symbol may be zero, and
- * the compiler takes the address of an object to be non-null.
- */
-#define RL78_SIZE(sec) ((size_t)(__##sec##_end - __##sec##_start))
+#include <sys/_initfini.h>
 
 static __always_inline void
 far_copy(char __far *dst, const char __far *src, size_t n)
@@ -69,17 +92,31 @@ far_copy(char __far *dst, const char __far *src, size_t n)
         *dst++ = *src++;
 }
 
+static void
+rl78_init_array(void)
+{
+#if defined(__INIT_FINI_ARRAY)
+    void (**fn)(void);
+
+    /* A script without .preinit_array leaves both symbols null. */
+    for (fn = __preinit_array_start; fn != __preinit_array_end; fn++)
+        (*fn)();
+    for (fn = __init_array_start; fn != __init_array_end; fn++)
+        (*fn)();
+#endif
+}
+
 void __used
 _cstart(void)
 {
 #ifndef NO_FLASH
-    far_copy(__data_start, rl78_data_source, RL78_SIZE(data));
-    far_copy(__sdata_start, rl78_sdata_source, RL78_SIZE(sdata));
-    far_copy(rl78_dataf_start, rl78_dataf_source, RL78_SIZE(dataf));
+    far_copy(rl78_datastart, rl78_far_romdatastart, rl78_size(romdatacopysize));
+    far_copy(rl78_sdatastart, rl78_far_romsdatastart, rl78_size(romsdatacopysize));
+    far_copy(rl78_far_datafstart, rl78_far_romdatafstart, rl78_size(romdatafcopysize));
 #endif
-    memset(__sbss_start, '\0', RL78_SIZE(sbss));
-    for (size_t n = RL78_SIZE(bssf); n--;)
-        rl78_bssf_start[n] = 0;
+    memset(rl78_sbssstart, '\0', rl78_size(sbsssize));
+    for (size_t n = rl78_size(bssfsize); n--;)
+        rl78_far_bssfstart[n] = 0;
     __start();
 }
 
@@ -88,5 +125,5 @@ __asm__("	.section .text.init.enter,\"ax\",@progbits\n"
         "	.global	__start\n"
         "	.type	__start, @function\n"
         "__start:\n"
-        "	movw	sp, #___stack\n"
+        "	movw	sp, #__stack\n"
         "	br	!!__cstart\n");

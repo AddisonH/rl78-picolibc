@@ -58,6 +58,7 @@ srcs_machine = [
   'strspn.S',
   'strstr.S',
   'memcpy_speed.c',
+  'sbrk.c',
   'memset_speed.c',
   '_COM_atof_f.c',
   '_COM_atoff_f.c',
