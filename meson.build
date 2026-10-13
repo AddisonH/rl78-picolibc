@@ -1988,6 +1988,10 @@ if oslib_test != ''
     set_variable(test_link_depends_noflash_variable, [picolibc_noflash_ld_value])
   endforeach
   test_noflash = linkerscript_test_variant == '' and crt0_test_variant != 'semihost_smrnmi' and crt0_test_variant != 'semihost_cfi'
+  # A machine's own linker script has no variant that runs from RAM alone.
+  if picolibc_ld_in != 'picolibc.ld.in'
+    test_noflash = false
+  endif
 else
   test_link_args = test_link_args_base
   test_link_depends = []
