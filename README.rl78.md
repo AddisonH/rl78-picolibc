@@ -33,6 +33,48 @@ when a machine has one and reads a `lib_c_args` cross property (options for
 the library's objects alone); `picocrt/crt0.h` lets a machine do the `.data`
 copy itself (`CRT0_DATA_INIT`).
 
+## Describing a device
+
+`picolibc.ld` describes the simulator's memory by default (code flash up to
+7FFFFH, 32 KiB of RAM at F8000H). For a device, a script of a few lines
+defines the symbols the template reads and includes it; the values are in
+the memory map of the device's hardware manual:
+
+```
+/* mydevice.ld */
+__flash_size  = 0x10000 - 0xd8;   /* code flash, less the tables at 00000H-000D7H */
+__ram         = 0xfef00;          /* first address of the RAM */
+__ram_size    = 0xffe20 - 0xfef00; /* up to the saddr area */
+__mirror      = 0xf2000;          /* the mirror as near pointers see it */
+__mirror_size = 0xfef00 - 0xf2000; /* must end below the RAM */
+__stack_size  = 0x200;
+INCLUDE picolibc.ld
+```
+
+and the program is linked with `-T mydevice.ld`. `__flash` is only needed
+when the application does not start right after the option bytes (a boot
+loader in front of it). The mirror shows the flash at the same offset
+within 64 KiB: with the usual setting (MAA = 0) the near address F2000H is
+flash address 02000H, so `__mirror` also decides where in the flash the
+constants (`.rodata`) go.
+
+The start-up code does not touch `.preserve` and `.noinit`
+(`__attribute__((noinit))`): they keep their values across a reset.
+
+The special function registers of a device are declared in the `iodefine.h`
+that Renesas tools generate for it; nothing in this library depends on one.
+
+## Printf and scanf levels
+
+The library has picolibc's usual levels (`d`, the default: everything; `f`:
+`float` instead of `double`; `l`: no floating point, with `long long`; `i`:
+integer only; `m`: minimal). An application picks one at link time by
+defining the entry points, with RL78's leading underscore:
+
+```
+-Wl,--defsym=_vfprintf=___i_vfprintf -Wl,--defsym=_vfscanf=___i_vfscanf
+```
+
 ## Building and testing
 
 `clang`, `ld.lld`, `llvm-ar` (from rl78-llvm), `rl78sim` and `scripts/run-rl78`
@@ -67,6 +109,4 @@ Notes:
   (`meson introspect --tests`).
 - The simulator layer has no file system, hence
   `-Dtests-enable-posix-io=false`.
-- Printf comes in picolibc's usual levels; an application picks a smaller
-  one at link time, e.g. `-Wl,--defsym=_vfprintf=___i_vfprintf` for the
-  integer-only version (note the RL78's leading underscore).
+

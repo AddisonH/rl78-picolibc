@@ -228,11 +228,13 @@ SECTIONS
 		PROVIDE_HIDDEN ( @PREFIX@__eh_frame_end = . );
 	} >flash
 
-	/* Data that survives a reset: no start-up code touches it. */
+	/* Data that survives a reset: no start-up code touches it. .noinit is
+	 * where the compiler puts objects with __attribute__((noinit)). */
 	.preserve (NOLOAD) : ALIGN(2) {
 		PROVIDE(@PREFIX@__preserve_start__ = .);
 		KEEP (*(SORT_BY_NAME(.preserve.*)))
 		KEEP (*(.preserve))
+		*(.noinit .noinit.*)
 		PROVIDE(@PREFIX@__preserve_end__ = .);
 	} >ram
 
