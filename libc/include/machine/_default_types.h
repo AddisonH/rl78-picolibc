@@ -118,15 +118,19 @@
 #endif
 
 #if (!defined(__SIZEOF_DOUBLE__) && defined(__DBL_MANT_DIG__))
-#if __DBL_MANT_DIG__ == 53
+#if __DBL_MANT_DIG__ == 24
+#define __SIZEOF_DOUBLE__ 4
+#elif __DBL_MANT_DIG__ == 53
 #define __SIZEOF_DOUBLE__ 8
 #else
 #error "unexpected __DBL_MANT_DIG__ value"
 #endif
 #endif
 
-#if (!defined(__HAVE_LONG_DOUBLE) && defined(__LDBL_MANT_DIG__))
-#if __LDBL_MANT_DIG__ == 53
+#if (!defined(__SIZEOF_LONG_DOUBLE__) && defined(__LDBL_MANT_DIG__))
+#if __LDBL_MANT_DIG__ == 24
+#define __SIZEOF_LONG_DOUBLE__ 4
+#elif __LDBL_MANT_DIG__ == 53
 #define __SIZEOF_LONG_DOUBLE__ 8
 #elif __LDBL_MANT_DIG__ == 64 || __LDBL_MANT_DIG__ == 113
 #define __SIZEOF_LONG_DOUBLE__ 16
