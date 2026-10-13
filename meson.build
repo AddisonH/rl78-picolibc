@@ -455,7 +455,8 @@ c_args += ['-D_LIBC', '-U_FORTIFY_SOURCE']
 
 # Options for the library alone, such as ones that mark its objects as
 # usable with any configuration of the application.
-c_args += meson.get_external_property('lib_c_args', [])
+lib_c_args = meson.get_external_property('lib_c_args', [])
+c_args += lib_c_args
 
 if have_cplusplus
   test_cpp_args = cpp_args + ['-D_TEST_LIBC']

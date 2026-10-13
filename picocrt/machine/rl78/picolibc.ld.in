@@ -167,22 +167,23 @@ SECTIONS
 		*(.const .const.*)
 		*(.gcc_except_table .gcc_except_table.*)
 
+		/* Named as RL78 scripts name them, without the C prefix. */
 		. = ALIGN(2);
-		PROVIDE_HIDDEN ( @PREFIX@__preinit_array_start = . );
-		PROVIDE_HIDDEN ( @PREFIX@__bothinit_array_start = . );
+		PROVIDE_HIDDEN ( __preinit_array_start = . );
+		PROVIDE_HIDDEN ( __bothinit_array_start = . );
 		KEEP (*(.preinit_array))
-		PROVIDE_HIDDEN ( @PREFIX@__preinit_array_end = . );
+		PROVIDE_HIDDEN ( __preinit_array_end = . );
 
-		PROVIDE_HIDDEN ( @PREFIX@__init_array_start = . );
+		PROVIDE_HIDDEN ( __init_array_start = . );
 		KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
 		KEEP (*(.init_array .ctors))
-		PROVIDE_HIDDEN ( @PREFIX@__init_array_end = . );
-		PROVIDE_HIDDEN ( @PREFIX@__bothinit_array_end = . );
+		PROVIDE_HIDDEN ( __init_array_end = . );
+		PROVIDE_HIDDEN ( __bothinit_array_end = . );
 
-		PROVIDE_HIDDEN ( @PREFIX@__fini_array_start = . );
+		PROVIDE_HIDDEN ( __fini_array_start = . );
 		KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
 		KEEP (*(.fini_array .dtors))
-		PROVIDE_HIDDEN ( @PREFIX@__fini_array_end = . );
+		PROVIDE_HIDDEN ( __fini_array_end = . );
 		. = ALIGN(2);
 	} >flash
 	ASSERT(ADDR(.rodata) + SIZEOF(.rodata) <= @PREFIX@__mirror_flash_end,

@@ -75,6 +75,12 @@ RL78_SIZE(bssfsize);
 /* The common code clears .bss and nothing else: .data is copied here, and
  * the init array is run here with the names above. */
 #define CRT0_DATA_INIT
+#ifdef CONSTRUCTORS
+#define RL78_CONSTRUCTORS CONSTRUCTORS
+#undef CONSTRUCTORS
+#else
+#define RL78_CONSTRUCTORS 1
+#endif
 #define CONSTRUCTORS        0
 #define POST_MEMORY_SETUP() rl78_init_array()
 #define __bss_start         rl78_bssstart
@@ -95,7 +101,7 @@ far_copy(char __far *dst, const char __far *src, size_t n)
 static void
 rl78_init_array(void)
 {
-#if defined(__INIT_FINI_ARRAY)
+#if defined(__INIT_FINI_ARRAY) && RL78_CONSTRUCTORS
     void (**fn)(void);
 
     /* A script without .preinit_array leaves both symbols null. */
@@ -120,10 +126,16 @@ _cstart(void)
     __start();
 }
 
-/* Reset: set the stack pointer and continue in C. */
+/*
+ * Reset: set the stack pointer and continue in C. The entry point is
+ * _start in C; RL78 linker scripts name it _start in assembly (ENTRY), so
+ * it has that name as well, weakly.
+ */
 __asm__("	.section .text.init.enter,\"ax\",@progbits\n"
         "	.global	__start\n"
+        "	.weak	_start\n"
         "	.type	__start, @function\n"
+        "_start:\n"
         "__start:\n"
         "	movw	sp, #__stack\n"
         "	br	!!__cstart\n");

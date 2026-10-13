@@ -38,14 +38,24 @@
 #include <stdlib.h>
 
 /* These magic symbols are provided by the linker.  */
-extern void (*__preinit_array_start[])(void) __weak;
-extern void (*__preinit_array_end[])(void) __weak;
-extern void (*__init_array_start[])(void) __weak;
-extern void (*__init_array_end[])(void) __weak;
-extern void (*__bothinit_array_start[])(void) __weak;
-extern void (*__bothinit_array_end[])(void) __weak;
-extern void (*__fini_array_start[])(void) __weak;
-extern void (*__fini_array_end[])(void) __weak;
+#ifdef __RL78__
+/*
+ * RL78 linker scripts define these symbols without the underscore that the
+ * compiler puts in front of a C name.
+ */
+#define _INITFINI_SYMBOL(name) __asm__(#name) __weak
+#else
+#define _INITFINI_SYMBOL(name) __weak
+#endif
+
+extern void (*__preinit_array_start[])(void) _INITFINI_SYMBOL(__preinit_array_start);
+extern void (*__preinit_array_end[])(void) _INITFINI_SYMBOL(__preinit_array_end);
+extern void (*__init_array_start[])(void) _INITFINI_SYMBOL(__init_array_start);
+extern void (*__init_array_end[])(void) _INITFINI_SYMBOL(__init_array_end);
+extern void (*__bothinit_array_start[])(void) _INITFINI_SYMBOL(__bothinit_array_start);
+extern void (*__bothinit_array_end[])(void) _INITFINI_SYMBOL(__bothinit_array_end);
+extern void (*__fini_array_start[])(void) _INITFINI_SYMBOL(__fini_array_start);
+extern void (*__fini_array_end[])(void) _INITFINI_SYMBOL(__fini_array_end);
 
 #ifdef __INIT_FINI_FUNCS
 extern void _init(void) __weak;
