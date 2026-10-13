@@ -48,6 +48,8 @@
  *   __flash, __flash_size        code flash after the fixed tables
  *   __ram, __ram_size            RAM below the saddr area
  *   __mirror, __mirror_size      the mirror as near pointers see it
+ *                                (default F1000H-F7FFFH, all of it below
+ *                                the default RAM)
  *   __stack_size                 room kept free for the stack
  */
 
@@ -70,8 +72,8 @@ MEMORY
 	/* The linker looks for this region by name to turn the flash address
 	 * of a constant into the address a near pointer holds. */
 	MIRROR (r)    :
-		ORIGIN = DEFINED(@PREFIX@__mirror) ? @PREFIX@__mirror : 0xf3000,
-		LENGTH = DEFINED(@PREFIX@__mirror_size) ? @PREFIX@__mirror_size : 0x5000
+		ORIGIN = DEFINED(@PREFIX@__mirror) ? @PREFIX@__mirror : 0xf1000,
+		LENGTH = DEFINED(@PREFIX@__mirror_size) ? @PREFIX@__mirror_size : 0x7000
 }
 
 SECTIONS

@@ -59,7 +59,49 @@ srcs_machine = [
   'strstr.S',
   'memcpy_speed.c',
   'memset_speed.c',
+  '_COM_atof_f.c',
+  '_COM_atoff_f.c',
+  '_COM_atoi_f.c',
+  '_COM_atol_f.c',
+  '_COM_atoll_f.c',
+  '_COM_bsearch_f.c',
+  '_COM_gets_f.c',
+  '_COM_memchr_f.S',
+  '_COM_memcmp_ff.S',
+  '_COM_memcpy_ff.S',
+  '_COM_memmove_ff.S',
+  '_COM_memset_f.S',
+  '_COM_perror_f.c',
+  '_COM_puts_f.c',
+  '_COM_qsort_f.c',
+  '_COM_strcat_ff.S',
+  '_COM_strchr_f.S',
+  '_COM_strcmp_ff.S',
+  '_COM_strcpy_ff.S',
+  '_COM_strcspn_ff.S',
+  '_COM_strlen_f.S',
+  '_COM_strncat_ff.S',
+  '_COM_strncmp_ff.S',
+  '_COM_strncpy_ff.S',
+  '_COM_strpbrk_ff.S',
+  '_COM_strrchr_f.S',
+  '_COM_strspn_ff.S',
+  '_COM_strstr_ff.S',
+  '_COM_strtod_ff.c',
+  '_COM_strtof_ff.c',
+  '_COM_strtoimax_ff.S',
+  '_COM_strtol_ff.c',
+  '_COM_strtold_ff.S',
+  '_COM_strtoll_ff.c',
+  '_COM_strtoul_ff.c',
+  '_COM_strtoull_ff.c',
+  '_COM_strtoumax_ff.S',
 ]
+
+subdir('machine')
+
+# _COM_strtod_ff.c mixes float and double constants on purpose.
+rl78_c_args = ['-Wno-double-promotion']
 
 foreach params : targets
   target = params['name']
@@ -70,5 +112,5 @@ foreach params : targets
 			      srcs_machine,
 			      pic: false,
 			      include_directories: inc,
-			      c_args: target_c_args + c_args + arg_fnobuiltin))
+			      c_args: target_c_args + c_args + arg_fnobuiltin + rl78_c_args))
 endforeach

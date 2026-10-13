@@ -378,4 +378,9 @@ uintmax_t wcstoumax_l(const _wchar_t * __restrict, _wchar_t **_restrict, int, lo
 
 _END_STD_C
 
+#ifdef __RL78__
+/* The same functions for data out of a near pointer's reach. */
+#include <machine/rl78-far.h>
+#endif
+
 #endif

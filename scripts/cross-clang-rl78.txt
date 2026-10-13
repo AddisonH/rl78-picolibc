@@ -21,7 +21,7 @@ librt = ['-lclang_rt.builtins']
 lib_c_args = ['-mmirror-source-common', '-mcommon-rom']
 default_alignment = 2
 # The layout RL78 simulators implement: 32 KiB of RAM below the saddr
-# area, and the mirror showing flash 03000H-07FFFH at F3000H.
+# area; the linker script's default mirror, F1000H-F7FFFH, lies below it.
 default_flash_addr = '0x000000d8'
 default_flash_size = '0x0007ff28'
 default_ram_addr   = '0x000f8000'
