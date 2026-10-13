@@ -36,6 +36,7 @@
 srcs_libm_machine = [
   's_sqrt.c',
   'sf_sqrt.c',
+  'sqrt_s3.S',
 ]
 
 src_libm_machine = files(srcs_libm_machine)

@@ -31,8 +31,23 @@
 
 #ifdef _NEED_FLOAT64
 
+#ifdef __RL78_S3__
+/* sqrt_s3.S takes the positive normal numbers and comes here with the
+   rest.  */
+#define RL78_SQRT64 __rl78_sqrt64_c
+__float64 __rl78_sqrt64_c(__float64 x);
+
+__attribute__((naked)) __float64
+sqrt64(__float64 x __attribute__((unused)))
+{
+  __asm__("br !!___rl78_sqrt64_asm");
+}
+#else
+#define RL78_SQRT64 sqrt64
+#endif
+
 __float64
-sqrt64(__float64 x)
+RL78_SQRT64(__float64 x)
 {
   union { __float64 d; uint64_t u; } v = {x};
   uint64_t m = v.u & 0x000fffffffffffffULL;
