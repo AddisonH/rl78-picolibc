@@ -132,6 +132,7 @@ SECTIONS
 	} >ram AT>flash
 	PROVIDE(@PREFIX@__dataf_start = ADDR(.dataf));
 	PROVIDE(@PREFIX@__dataf_source = LOADADDR(.dataf));
+	PROVIDE(@PREFIX@__dataf_end = ADDR(.dataf) + SIZEOF(.dataf));
 	PROVIDE(@PREFIX@__dataf_size = SIZEOF(.dataf));
 
 	.sdata : ALIGN(2) {
@@ -140,6 +141,7 @@ SECTIONS
 	} >saddr AT>flash
 	PROVIDE(@PREFIX@__sdata_start = ADDR(.sdata));
 	PROVIDE(@PREFIX@__sdata_source = LOADADDR(.sdata));
+	PROVIDE(@PREFIX@__sdata_end = ADDR(.sdata) + SIZEOF(.sdata));
 	PROVIDE(@PREFIX@__sdata_size = SIZEOF(.sdata));
 
 	/* Constants and tables that near pointers read: in the mirror. */
@@ -225,6 +227,7 @@ SECTIONS
 		. = ALIGN(2);
 	} >saddr
 	PROVIDE(@PREFIX@__sbss_start = ADDR(.sbss));
+	PROVIDE(@PREFIX@__sbss_end = ADDR(.sbss) + SIZEOF(.sbss));
 	PROVIDE(@PREFIX@__sbss_size = SIZEOF(.sbss));
 
 	.bss (NOLOAD) : ALIGN(2) {
@@ -244,6 +247,7 @@ SECTIONS
 		. = ALIGN(2);
 	} >ram
 	PROVIDE(@PREFIX@__bssf_start = ADDR(.bssf));
+	PROVIDE(@PREFIX@__bssf_end = ADDR(.bssf) + SIZEOF(.bssf));
 	PROVIDE(@PREFIX@__bssf_size = SIZEOF(.bssf));
 
 	PROVIDE(@PREFIX@__end = ADDR(.bssf) + SIZEOF(.bssf));
