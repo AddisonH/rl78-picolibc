@@ -1,0 +1,252 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Copyright © 2026 Addison Heavner
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above
+ *    copyright notice, this list of conditions and the following
+ *    disclaimer in the documentation and/or other materials provided
+ *    with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*
+ * RL78 memory layout.
+ *
+ * Code flash starts at 00000H with the vector table, the CALLT table and
+ * the option bytes. Near (16-bit) data pointers reach F0000H-FFFFFH only:
+ * RAM, the SFRs, and the "mirror", a window that shows part of the code
+ * flash. Constants read through near pointers (.rodata) therefore have to
+ * lie in the mirrored part of the flash, and the initial contents of .data
+ * are copied by far pointers.
+ *
+ * Symbols an application may define to describe the device:
+ *
+ *   __flash, __flash_size        code flash after the fixed tables
+ *   __ram, __ram_size            RAM below the saddr area
+ *   __mirror, __mirror_size      the mirror as near pointers see it
+ *   __stack_size                 room kept free for the stack
+ */
+
+ENTRY(@PREFIX@_start)
+
+MEMORY
+{
+	vec    (r)    : ORIGIN = 0x00000, LENGTH = 0x04
+	ivec   (r)    : ORIGIN = 0x00004, LENGTH = 0x7c
+	callt0 (r)    : ORIGIN = 0x00080, LENGTH = 0x40
+	opt    (r)    : ORIGIN = 0x000c0, LENGTH = 0x04
+	secid  (r)    : ORIGIN = 0x000c4, LENGTH = 0x0a
+	flash  (rx!w) :
+		ORIGIN = DEFINED(@PREFIX@__flash) ? @PREFIX@__flash : @DEFAULT_FLASH_ADDR@,
+		LENGTH = DEFINED(@PREFIX@__flash_size) ? @PREFIX@__flash_size : @DEFAULT_FLASH_SIZE@
+	ram    (w!rx) :
+		ORIGIN = DEFINED(@PREFIX@__ram) ? @PREFIX@__ram : @DEFAULT_RAM_ADDR@,
+		LENGTH = DEFINED(@PREFIX@__ram_size) ? @PREFIX@__ram_size : @DEFAULT_RAM_SIZE@
+	saddr  (w!rx) : ORIGIN = 0xffe20, LENGTH = 0xa0
+	/* The linker looks for this region by name to turn the flash address
+	 * of a constant into the address a near pointer holds. */
+	MIRROR (r)    :
+		ORIGIN = DEFINED(@PREFIX@__mirror) ? @PREFIX@__mirror : 0xf3000,
+		LENGTH = DEFINED(@PREFIX@__mirror_size) ? @PREFIX@__mirror_size : 0x5000
+}
+
+SECTIONS
+{
+	PROVIDE(@PREFIX@@STACK@ = ORIGIN(ram) + LENGTH(ram));
+
+	/* Flash addresses of the mirror: 16 address bits are shared. */
+	@PREFIX@__mirror_flash = CONSTANT(MIRRORAREASTART) + (ORIGIN(MIRROR) & 0xffff);
+	@PREFIX@__mirror_flash_end = @PREFIX@__mirror_flash + LENGTH(MIRROR);
+
+	.vec : {
+		KEEP (*(.vec))
+	} >vec
+
+	.ivec : {
+		KEEP (*(.ivec))
+	} >ivec
+
+	.callt0 : ALIGN(2) {
+		KEEP (*(.callt0))
+	} >callt0
+
+	.option_byte : {
+		KEEP (*(.option_byte))
+	} >opt
+
+	.security_id : {
+		KEEP (*(.security_id))
+	} >secid
+
+	/* Start-up code, and what has to stay below 10000H. */
+	.lowtext : {
+		KEEP (*(.text.init.enter))
+		*(.plt)
+		*(.lowtext .lowtext.*)
+		. = ALIGN(2);
+	} >flash
+
+	/* The images of initialized data fill the space below the mirror. */
+	.data : ALIGN(2) {
+		*(.data .data.*)
+		. = ALIGN(2);
+	} >ram AT>flash
+	PROVIDE(@PREFIX@__data_start = ADDR(.data));
+	PROVIDE(@PREFIX@__data_source = LOADADDR(.data));
+	PROVIDE(@PREFIX@__data_end = ADDR(.data) + SIZEOF(.data));
+	PROVIDE(@PREFIX@__data_size = SIZEOF(.data));
+	PROVIDE(@PREFIX@__data_source_end = LOADADDR(.data) + SIZEOF(.data));
+	PROVIDE(@PREFIX@__data_source_size = SIZEOF(.data));
+	PROVIDE(@PREFIX@__edata = @PREFIX@__data_end);
+	PROVIDE(@PREFIX@_edata = @PREFIX@__data_end);
+	PROVIDE(@PREFIX@edata = @PREFIX@__data_end);
+
+	.dataf : ALIGN(2) {
+		*(.dataf .dataf.*)
+		. = ALIGN(2);
+	} >ram AT>flash
+	PROVIDE(@PREFIX@__dataf_start = ADDR(.dataf));
+	PROVIDE(@PREFIX@__dataf_source = LOADADDR(.dataf));
+	PROVIDE(@PREFIX@__dataf_size = SIZEOF(.dataf));
+
+	.sdata : ALIGN(2) {
+		*(.sdata .sdata.*)
+		. = ALIGN(2);
+	} >saddr AT>flash
+	PROVIDE(@PREFIX@__sdata_start = ADDR(.sdata));
+	PROVIDE(@PREFIX@__sdata_source = LOADADDR(.sdata));
+	PROVIDE(@PREFIX@__sdata_size = SIZEOF(.sdata));
+
+	/* Constants and tables that near pointers read: in the mirror. */
+	.rodata MAX(ALIGN(LOADADDR(.sdata) + SIZEOF(.sdata), 2), @PREFIX@__mirror_flash) : {
+		*(.rodata .rodata.*)
+		*(.const .const.*)
+		*(.gcc_except_table .gcc_except_table.*)
+
+		. = ALIGN(2);
+		PROVIDE_HIDDEN ( @PREFIX@__preinit_array_start = . );
+		PROVIDE_HIDDEN ( @PREFIX@__bothinit_array_start = . );
+		KEEP (*(.preinit_array))
+		PROVIDE_HIDDEN ( @PREFIX@__preinit_array_end = . );
+
+		PROVIDE_HIDDEN ( @PREFIX@__init_array_start = . );
+		KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
+		KEEP (*(.init_array .ctors))
+		PROVIDE_HIDDEN ( @PREFIX@__init_array_end = . );
+		PROVIDE_HIDDEN ( @PREFIX@__bothinit_array_end = . );
+
+		PROVIDE_HIDDEN ( @PREFIX@__fini_array_start = . );
+		KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
+		KEEP (*(.fini_array .dtors))
+		PROVIDE_HIDDEN ( @PREFIX@__fini_array_end = . );
+		. = ALIGN(2);
+	} >flash
+	ASSERT(ADDR(.rodata) + SIZEOF(.rodata) <= @PREFIX@__mirror_flash_end,
+	       "Error: .rodata does not fit in the mirror area; declare large constants __far")
+
+	.text : ALIGN(2) {
+		*(.text.unlikely .text.unlikely.*)
+		*(.text.startup .text.startup.*)
+		*(.text .text.* .opd .opd.*)
+		KEEP (*(.init .init.*))
+		KEEP (*(.fini .fini.*))
+@CPP@		PROVIDE (__start___lcxx_override = .);
+@CPP@		*(__lcxx_override)
+@CPP@		PROVIDE (__stop___lcxx_override = .);
+		. = ALIGN(2);
+		@PREFIX@__text_end = .;
+		PROVIDE (@PREFIX@__etext = @PREFIX@__text_end);
+		PROVIDE (@PREFIX@_etext = @PREFIX@__text_end);
+		PROVIDE (@PREFIX@etext = @PREFIX@__text_end);
+	} >flash
+
+	/* Code and constants reached through far pointers. */
+	.textf : ALIGN(2) {
+		*(.textf .textf.*)
+	} >flash
+
+	.frodata : ALIGN(2) {
+		*(.frodata .frodata.*)
+		. = ALIGN(2);
+		*(.constf .constf.*)
+	} >flash
+
+	.eh_frame_hdr : {
+		PROVIDE_HIDDEN ( @PREFIX@__eh_frame_hdr_start = . );
+		*(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*)
+		PROVIDE_HIDDEN ( @PREFIX@__eh_frame_hdr_end = . );
+	} >flash
+
+	.eh_frame : {
+		PROVIDE_HIDDEN ( @PREFIX@__eh_frame_start = . );
+		KEEP (*(.eh_frame .eh_frame.*))
+		PROVIDE_HIDDEN ( @PREFIX@__eh_frame_end = . );
+	} >flash
+
+	.sbss (NOLOAD) : ALIGN(2) {
+		*(.sbss .sbss.*)
+		. = ALIGN(2);
+		*(.sbss_bit)
+		. = ALIGN(2);
+	} >saddr
+	PROVIDE(@PREFIX@__sbss_start = ADDR(.sbss));
+	PROVIDE(@PREFIX@__sbss_size = SIZEOF(.sbss));
+
+	.bss (NOLOAD) : ALIGN(2) {
+		*(.bss .bss.*)
+		. = ALIGN(2);
+		*(.bss_bit)
+		. = ALIGN(2);
+		*(COMMON)
+		. = ALIGN(2);
+	} >ram
+	PROVIDE(@PREFIX@__bss_start = ADDR(.bss));
+	PROVIDE(@PREFIX@__bss_end = ADDR(.bss) + SIZEOF(.bss));
+	PROVIDE(@PREFIX@__bss_size = SIZEOF(.bss));
+
+	.bssf (NOLOAD) : ALIGN(2) {
+		*(.bssf .bssf.*)
+		. = ALIGN(2);
+	} >ram
+	PROVIDE(@PREFIX@__bssf_start = ADDR(.bssf));
+	PROVIDE(@PREFIX@__bssf_size = SIZEOF(.bssf));
+
+	PROVIDE(@PREFIX@__end = ADDR(.bssf) + SIZEOF(.bssf));
+	PROVIDE(@PREFIX@_end = @PREFIX@__end);
+	PROVIDE(@PREFIX@end = @PREFIX@__end);
+
+	/* The heap runs from the end of the data up to the stack's reserve. */
+	PROVIDE(@PREFIX@__heap_start = @PREFIX@__end);
+	PROVIDE(@PREFIX@__heap_end = @PREFIX@@STACK@ - (DEFINED(@PREFIX@@STACK@_size) ? @PREFIX@@STACK@_size : @DEFAULT_STACK_SIZE@));
+	PROVIDE(@PREFIX@__heap_size = @PREFIX@__heap_end - @PREFIX@__heap_start);
+	ASSERT(@PREFIX@__heap_end >= @PREFIX@__heap_start, "Error: no room left for the stack")
+
+	/DISCARD/ : {
+		*(.note .note.*)
+		*(.gnu.warning*)
+	}
+}

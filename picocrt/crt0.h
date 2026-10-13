@@ -103,7 +103,7 @@ __start(int argc, char **argv)
 __start(void)
 #endif
 {
-#ifndef NO_FLASH
+#if !defined(NO_FLASH) && !defined(CRT0_DATA_INIT)
     /* Initialize .data from FLASH when enabled */
     memcpy(__data_start, __data_source, (uintptr_t)__data_size);
 #endif

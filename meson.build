@@ -453,6 +453,10 @@ native_c_args += c_prep_flags + c_flags
 test_c_args = c_args + ['-D_TEST_LIBC']
 c_args += ['-D_LIBC', '-U_FORTIFY_SOURCE']
 
+# Options for the library alone, such as ones that mark its objects as
+# usable with any configuration of the application.
+c_args += meson.get_external_property('lib_c_args', [])
+
 if have_cplusplus
   test_cpp_args = cpp_args + ['-D_TEST_LIBC']
   cpp_args += ['-D_LIBC', '-U_FORTIFY_SOURCE']
@@ -886,6 +890,13 @@ init_section_template = '''
 	} >@2@ AT>@2@ :@3@
 '''
 
+# A machine whose memory layout the generic script cannot describe
+# brings its own template.
+picolibc_ld_in = 'picolibc.ld.in'
+if fs.is_file('picocrt/machine' / host_cpu_family / 'picolibc.ld.in')
+  picolibc_ld_in = 'picocrt/machine' / host_cpu_family / 'picolibc.ld.in'
+endif
+
 foreach params : [default_target] + targets
 
   target = params['name']
@@ -1249,7 +1260,7 @@ foreach params : [default_target] + targets
 
     if not is_variable(picolibc_ld_config_variable)
       set_variable(picolibc_ld_config_variable,
-                   configure_file(input: 'picolibc.ld.in',
+                   configure_file(input: picolibc_ld_in,
                                   output: picolibc_ld_file,
                                   configuration: picolibc_ld_data,
                                   install: picolibc_ld_install and really_install,
@@ -1268,7 +1279,7 @@ foreach params : [default_target] + targets
 
     if not is_variable(picolibcpp_ld_config_variable)
       set_variable(picolibcpp_ld_config_variable,
-                 configure_file(input: 'picolibc.ld.in',
+                 configure_file(input: picolibc_ld_in,
                                 output: picolibcpp_ld_file,
                                 configuration: picolibcpp_ld_data,
                                 install: picolibc_ld_install and really_install,
@@ -1289,7 +1300,7 @@ foreach params : [default_target] + targets
 
       if not is_variable(picolibc_inittls_ld_config_variable)
         set_variable(picolibc_inittls_ld_config_variable,
-                     configure_file(input: 'picolibc.ld.in',
+                     configure_file(input: picolibc_ld_in,
                                     output: picolibc_inittls_ld_file,
                                     configuration: picolibc_inittls_ld_data,
                                     install: picolibc_ld_install and really_install,
@@ -1336,7 +1347,7 @@ foreach params : [default_target] + targets
 
     if not is_variable(picolibc_noflash_ld_config_variable)
       set_variable(picolibc_noflash_ld_config_variable,
-                   configure_file(input: 'picolibc.ld.in',
+                   configure_file(input: picolibc_ld_in,
                                   output: picolibc_noflash_ld_file,
                                   configuration: picolibc_noflash_ld_data,
                                   install: picolibc_ld_install and really_install,
@@ -1353,7 +1364,7 @@ foreach params : [default_target] + targets
 
     if not is_variable(picolibcpp_noflash_ld_config_variable)
       set_variable(picolibcpp_noflash_ld_config_variable,
-                   configure_file(input: 'picolibc.ld.in',
+                   configure_file(input: picolibc_ld_in,
                                   output: picolibcpp_noflash_ld_file,
                                   configuration: picolibcpp_noflash_ld_data,
                                   install: picolibc_ld_install and really_install,
@@ -1396,7 +1407,7 @@ foreach params : [default_target] + targets
 
     if not is_variable(picolibc_linux_ld_config_variable)
       set_variable(picolibc_linux_ld_config_variable,
-                   configure_file(input: 'picolibc.ld.in',
+                   configure_file(input: picolibc_ld_in,
                                   output: picolibc_linux_ld_file,
                                   configuration: picolibc_linux_ld_data,
                                   install: picolibc_ld_install and really_install,
@@ -1413,7 +1424,7 @@ foreach params : [default_target] + targets
 
     if not is_variable(picolibcpp_linux_ld_config_variable)
       set_variable(picolibcpp_linux_ld_config_variable,
-                   configure_file(input: 'picolibc.ld.in',
+                   configure_file(input: picolibc_ld_in,
                                   output: picolibcpp_linux_ld_file,
                                   configuration: picolibcpp_linux_ld_data,
                                   install: picolibc_ld_install and really_install,
