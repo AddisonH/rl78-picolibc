@@ -1,6 +1,7 @@
 	.file	"memmove.S"
 
-#if !(defined(__FAR_ROM__) || defined(__FAR_DATA__))
+; Byte by byte, for size; memmove_speed.c is used otherwise.
+#if !(defined(__FAR_ROM__) || defined(__FAR_DATA__)) && defined(__OPTIMIZE_SIZE__)
 	.section .text
 
 	.global  _memmove
