@@ -1,4 +1,8 @@
 # Picolibc
+
+> **RL78 fork.** This repository adds Renesas RL78 support on the `rl78`
+> branch; see [README.rl78.md](README.rl78.md). The rest of this file is
+> upstream's.
 Copyright © 2018-2023 Keith Packard
 
 Picolibc is library offering standard C library APIs that targets

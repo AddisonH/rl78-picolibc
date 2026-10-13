@@ -112,6 +112,7 @@ SECTIONS
 
 	/* The images of initialized data fill the space below the mirror. */
 	.data : ALIGN(2) {
+		KEEP (*(.stack_chk .stack_chk.*))
 		*(.data .data.*)
 		. = ALIGN(2);
 	} >ram AT>flash
@@ -144,6 +145,7 @@ SECTIONS
 	/* Constants and tables that near pointers read: in the mirror. */
 	.rodata MAX(ALIGN(LOADADDR(.sdata) + SIZEOF(.sdata), 2), @PREFIX@__mirror_flash) : {
 		*(.rodata .rodata.*)
+		*(.data.rel.ro .data.rel.ro.*)
 		*(.const .const.*)
 		*(.gcc_except_table .gcc_except_table.*)
 
@@ -162,6 +164,7 @@ SECTIONS
 		PROVIDE_HIDDEN ( @PREFIX@__fini_array_start = . );
 		KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
 		KEEP (*(.fini_array .dtors))
+		KEEP (*(.fini_array*))
 		PROVIDE_HIDDEN ( @PREFIX@__fini_array_end = . );
 		. = ALIGN(2);
 	} >flash
@@ -206,6 +209,14 @@ SECTIONS
 		KEEP (*(.eh_frame .eh_frame.*))
 		PROVIDE_HIDDEN ( @PREFIX@__eh_frame_end = . );
 	} >flash
+
+	/* Data that survives a reset: no start-up code touches it. */
+	.preserve (NOLOAD) : ALIGN(2) {
+		PROVIDE(@PREFIX@__preserve_start__ = .);
+		KEEP (*(SORT_BY_NAME(.preserve.*)))
+		KEEP (*(.preserve))
+		PROVIDE(@PREFIX@__preserve_end__ = .);
+	} >ram
 
 	.sbss (NOLOAD) : ALIGN(2) {
 		*(.sbss .sbss.*)
