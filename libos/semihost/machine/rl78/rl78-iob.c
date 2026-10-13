@@ -47,13 +47,22 @@ rl78_putc(char c, FILE *file)
     return (unsigned char)c;
 }
 
-static FILE __stdio = FDEV_SETUP_STREAM(rl78_putc, NULL, NULL, _FDEV_SETUP_WRITE);
+/* There is no input: reading gives end of file. */
+static int
+rl78_getc(FILE *file)
+{
+    (void)file;
+    return EOF;
+}
+
+static FILE __stdio = FDEV_SETUP_STREAM(rl78_putc, rl78_getc, NULL, _FDEV_SETUP_RW);
 
 #ifdef __strong_reference
-#define STDIO_ALIAS(x) __strong_reference(stdout, x);
+#define STDIO_ALIAS(x) __strong_reference(stdin, x);
 #else
 #define STDIO_ALIAS(x) FILE * const x = &__stdio;
 #endif
 
-FILE * const stdout = &__stdio;
+FILE * const stdin = &__stdio;
+STDIO_ALIAS(stdout);
 STDIO_ALIAS(stderr);
